@@ -21,7 +21,8 @@ namespace static_equilibuim_test{
                       std::vector<Eigen::Vector2d>& vertices,
                       int debuglevel = 0,
                       double eps = 0.05,
-                      size_t maxiter = 30
+                      size_t maxiter = 30,
+                      bool revertIfFail = false
                       );
 }
 

@@ -27,6 +27,10 @@ namespace static_equilibuim_test{
     const Eigen::Vector2d n1 = std::get<1>(v1);
     const Eigen::Vector2d n2 = std::get<1>(v2);
 
+    // outerが平行
+    if (n1 == n2) return 0;
+    if (n1 == -n2) return 1e5;
+
     // pX: outerの交点を求める
     Eigen::Matrix<double,2,2> tmp;
     tmp.row(0) = n1.transpose(); tmp.row(1) = n2.transpose();
@@ -51,7 +55,8 @@ namespace static_equilibuim_test{
                       std::vector<Eigen::Vector2d>& vertices,
                       int debuglevel,
                       double eps,
-                      size_t maxiter
+                      size_t maxiter,
+                      bool revertIfFail
                       ){
     if(A.cols() != C.cols()){
       std::cerr << "[static_equilibuim_test::calcProjection] A.cols() != C.cols()" << std::endl;
@@ -99,24 +104,43 @@ namespace static_equilibuim_test{
     Eigen::VectorXd o = Eigen::VectorXd::Zero(M.cols());
     clpeigen::solver solver;
     solver.initialize(o,M,lbM,ubM,lb,ub,debuglevel);
+    solver.model().setPrimalTolerance(1e-10);//default 1e-7
 
     Eigen::VectorXd solution;
     std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y; //半時計回り. first: innervertex, second: outervector, third: この点と次の点で構成させるOuterとInnerの間の三角系の面積
 
     // first 4 solve
-    std::vector<Eigen::Vector2d> outer(4);
-    outer[0] = Eigen::Vector2d(1,0);
-    outer[1] = Eigen::Vector2d(0,1);
-    outer[2] = Eigen::Vector2d(-1,0);
-    outer[3] = Eigen::Vector2d(0,-1);
-    for(size_t i=0;i<outer.size();i++){
-      o.head<2>() = outer[i];
-      solver.updateObjective(o);
-      if(!solver.solve()){
-        return false; // solution is infeasible
+    {
+      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y_raw;
+      std::vector<Eigen::Vector2d> outer(4);
+      outer[0] = Eigen::Vector2d(1,0);
+      outer[1] = Eigen::Vector2d(0,1);
+      outer[2] = Eigen::Vector2d(-1,0);
+      outer[3] = Eigen::Vector2d(0,-1);
+      for(size_t i=0;i<outer.size();i++){
+        o.head<2>() = outer[i];
+        solver.updateObjective(o);
+        if(!solver.solve()){
+          return false; // solution is infeasible
+        }
+        solver.getSolution(solution);
+        Y_raw.push_back(std::tuple<Eigen::Vector2d,Eigen::Vector2d,double>(solution.head<2>(),outer[i],0));
       }
-      solver.getSolution(solution);
-      Y.push_back(std::tuple<Eigen::Vector2d,Eigen::Vector2d,double>(solution.head<2>(),outer[i],0));
+
+      // 既存の点と重複していたら無視
+      for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y_raw.begin();it!=Y_raw.end();it++){
+        bool isClose = false;
+        for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it2=Y.begin();it2!=Y.end();it2++){
+          if((std::get<0>(*it) - std::get<0>(*it2)).norm() < 1e-6){
+            isClose = true;
+            break;
+          }
+        }
+        if(!isClose){
+          Y.push_back(*it);
+          if(debuglevel) std::cerr <<"vertex"<< std::get<0>(*it).transpose() << std::endl;
+        }
+      }
     }
 
     //calc initial area_Y_inner area_Y_mid(=area_Y_outer - area_Y_inner)
@@ -139,7 +163,7 @@ namespace static_equilibuim_test{
 
     // loop until conversion
     for(size_t i=0;i<maxiter;i++){
-      if(area_Y_inner / (area_Y_inner+area_Y_mid) > 1 - eps) break; //近似が概ね収束
+      if(area_Y_inner / (area_Y_inner+area_Y_mid) > 1.0 - eps) break; //近似が概ね収束
 
       // 最大値を探す
       double maxvalue = -1;
@@ -166,6 +190,20 @@ namespace static_equilibuim_test{
       solver.getSolution(solution);
       Eigen::Vector2d pX = solution.head<2>();
 
+      if(debuglevel) std::cerr << "org"<< n.transpose() << " " << pX.transpose() << std::endl;
+
+      // 既存の点と重複していたら無視
+      bool isClose = false;
+      for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y.begin();it!=Y.end();it++){
+        if((std::get<0>(*it) - pX).norm() < 1e-6){
+          isClose = true;
+          area_Y_mid -= std::get<2>(*maxit);
+          std::get<2>(*maxit) = 0.0;
+          break;
+        }
+      }
+      if(isClose) continue;
+
       area_Y_inner += calcArea(p1,pX,p2);
       area_Y_mid -= std::get<2>(*maxit);
       std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> vX(pX,n,0);
@@ -174,7 +212,11 @@ namespace static_equilibuim_test{
       std::get<2>(vX) = calcMidArea(vX,*nextit);
       area_Y_mid += std::get<2>(vX);
       Y.insert(std::next(maxit),vX);
+
+      if(debuglevel) std::cerr <<"vertex"<< n.transpose() << " "<< pX.transpose() << std::endl;
     }
+
+    if(revertIfFail && area_Y_inner / (area_Y_inner+area_Y_mid) < 1.0 - eps) return false;
 
     //return value
     M_out = Eigen::SparseMatrix<double,Eigen::RowMajor>(Y.size(),2);
