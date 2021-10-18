@@ -104,7 +104,8 @@ namespace static_equilibuim_test{
     Eigen::VectorXd o = Eigen::VectorXd::Zero(M.cols());
     clpeigen::solver solver;
     solver.initialize(o,M,lbM,ubM,lb,ub,debuglevel);
-    solver.model().setPrimalTolerance(1e-10);//default 1e-7
+    solver.model().setPrimalTolerance(1e-12);//default 1e-7. vertexを見逃さないようにする
+    solver.model().setDualTolerance(1e-12);
 
     Eigen::VectorXd solution;
     std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y; //半時計回り. first: innervertex, second: outervector, third: この点と次の点で構成させるOuterとInnerの間の三角系の面積
