@@ -226,9 +226,15 @@ namespace static_equilibuim_test{
     vertices.resize(Y.size());
     size_t i=0;
     for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y.begin();it!=Y.end();it++){
-      M_out.insert(i,0) = std::get<1>(*it)[0];
-      M_out.insert(i,1) = std::get<1>(*it)[1];
-      u_out[i] = std::get<1>(*it).dot(std::get<0>(*it));
+      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator nextit = std::next(it);
+      if (nextit == Y.end()) nextit = Y.begin();
+      Eigen::Vector2d p1 = std::get<0>(*it);
+      Eigen::Vector2d p2 = std::get<0>(*nextit);
+      Eigen::Vector2d n = Eigen::Vector2d((p2-p1)[1],-(p2-p1)[0]).normalized(); // 点の重複を除く処理によって、std::get<1>(*it)のoutervectorは領域を示すものとしては不適切になっている
+
+      M_out.insert(i,0) = n[0];
+      M_out.insert(i,1) = n[1];
+      u_out[i] = n.dot(p1);
       l_out[i] = -std::numeric_limits<double>::max();
       vertices[i] = std::get<0>(*it);
       i++;
