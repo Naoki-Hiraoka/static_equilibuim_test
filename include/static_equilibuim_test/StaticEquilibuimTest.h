@@ -22,7 +22,8 @@ namespace static_equilibuim_test{
                       int debuglevel = 0,
                       double eps = 0.05,
                       size_t maxiter = 30,
-                      bool revertIfFail = false
+                      bool revertIfFail = false,
+                      double lpTolerance = 1e-12
                       );
 }
 
