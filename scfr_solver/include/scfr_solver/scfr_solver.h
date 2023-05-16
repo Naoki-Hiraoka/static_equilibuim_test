@@ -18,9 +18,9 @@ namespace scfr_solver {
   };
 
   bool calcSCFR(const std::vector<Eigen::Transform<double, 3, Eigen::AffineCompact> >& poses,
-                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N)
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N). ロボットが受ける力に対応
                 const std::vector<Eigen::VectorXd>& bs,
-                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& Cs, // pose local frame. 列は6(F N)
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& Cs, // pose local frame. 列は6(F N) ロボットが受ける力に対応
                 const std::vector<Eigen::VectorXd>& dls,
                 const std::vector<Eigen::VectorXd>& dus,
                 const double& m, // robotの質量
