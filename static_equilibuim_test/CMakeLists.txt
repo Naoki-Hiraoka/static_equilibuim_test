@@ -3,7 +3,7 @@ project(static_equilibuim_test)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Release)
 
 find_package(catkin REQUIRED COMPONENTS
   clpeigen)
@@ -18,7 +18,7 @@ catkin_package(
  INCLUDE_DIRS include
  LIBRARIES static_equilibuim_test
 #  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+ DEPENDS EIGEN
 )
 
 ###########
