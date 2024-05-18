@@ -1,3 +1,4 @@
 - git:
     local-name: lp_solvers
     uri: https://github.com/Naoki-Hiraoka/lp_solvers.git
+    version: 1.0
