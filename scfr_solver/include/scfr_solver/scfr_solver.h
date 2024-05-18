@@ -17,6 +17,22 @@ namespace scfr_solver {
     double lpTolerance = 1e-15; // 1e-12だと不正確. 1e-15くらい小さくないと，vertexを見逃す
   };
 
+  bool calcSCFR(const std::vector<Eigen::Isometry3d>& poses,
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N). ロボットが受ける力に対応
+                const std::vector<Eigen::VectorXd>& bs,
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& Cs, // pose local frame. 列は6(F N) ロボットが受ける力に対応
+                const std::vector<Eigen::VectorXd>& dls,
+                const std::vector<Eigen::VectorXd>& dus,
+                const double& m, // robotの質量
+                Eigen::SparseMatrix<double,Eigen::RowMajor>& M, // world frame. 列は2(XY)
+                Eigen::VectorXd& l,
+                Eigen::VectorXd& u,
+                std::vector<Eigen::Vector2d>& vertices,
+                const SCFRParam& param = SCFRParam()
+                );
+
+
+  // depreceated
   bool calcSCFR(const std::vector<Eigen::Transform<double, 3, Eigen::AffineCompact> >& poses,
                 const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N). ロボットが受ける力に対応
                 const std::vector<Eigen::VectorXd>& bs,

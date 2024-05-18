@@ -76,7 +76,7 @@ namespace scfr_solver {
     return true;
   }
 
-  bool calcSCFR(const std::vector<Eigen::Transform<double, 3, Eigen::AffineCompact>>& poses,
+  bool calcSCFR(const std::vector<Eigen::Isometry3d>& poses,
                 const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N)
                 const std::vector<Eigen::VectorXd>& bs,
                 const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& Cs, // pose local frame. 列は6(F N)
@@ -135,7 +135,7 @@ namespace scfr_solver {
         for(size_t i=0;i<poses.size();i++){
           Eigen::SparseMatrix<double,Eigen::ColMajor> GraspMatrix(6,6);
           {
-            const Eigen::Transform<double, 3, Eigen::AffineCompact>& pos = poses[i];
+            const Eigen::Isometry3d& pos = poses[i];
             const Eigen::Matrix3d& R = pos.linear();
             const Eigen::Matrix3d& p_x_R = scfr_solver::hat(pos.translation()) * R;
 
@@ -241,4 +241,40 @@ namespace scfr_solver {
 
     return true;
   }
+
+
+  // deprecated
+  bool calcSCFR(const std::vector<Eigen::Transform<double, 3, Eigen::AffineCompact>>& poses,
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& As, // pose local frame. 列は6(F N)
+                const std::vector<Eigen::VectorXd>& bs,
+                const std::vector<Eigen::SparseMatrix<double,Eigen::RowMajor> >& Cs, // pose local frame. 列は6(F N)
+                const std::vector<Eigen::VectorXd>& dls,
+                const std::vector<Eigen::VectorXd>& dus,
+                const double& m, // robotの質量
+                Eigen::SparseMatrix<double,Eigen::RowMajor>& M, // world frame. 列は2(XY)
+                Eigen::VectorXd& l,
+                Eigen::VectorXd& u,
+                std::vector<Eigen::Vector2d>& vertices,
+                const SCFRParam& param
+                ) {
+    std::vector<Eigen::Isometry3d> poses_(poses.size());
+    for(int i=0;i<poses.size();i++){
+      poses_[i].translation() = poses[i].translation();
+      poses_[i].linear() = poses[i].linear();
+    }
+    return calcSCFR(poses_,
+                    As,
+                    bs,
+                    Cs,
+                    dls,
+                    dus,
+                    m,
+                    M,
+                    l,
+                    u,
+                    vertices,
+                    param);
+  }
+
+
 }
