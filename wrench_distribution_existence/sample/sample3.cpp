@@ -11,7 +11,6 @@ int main(){
     eef.dim = 6;
     eef.F.resize(2);
     eef.F[0].resize(6,6); for(int i=0;i<6;i++) eef.F[0].insert(i,i) = 1.0;
-    eef.F[1].resize(6,6);
     eef.dl = Eigen::VectorXd::Zero(11); eef.C.resize(11,6); eef.du = 1e10 * Eigen::VectorXd::Ones(11);
     eef.C.insert(0,2) = 1.0; eef.du[0] = 2000.0;
     eef.C.insert(1,0) = 1.0; eef.C.insert(1,2) = 0.2;
@@ -33,7 +32,6 @@ int main(){
     eef.dim = 6;
     eef.F.resize(2);
     eef.F[0].resize(6,6); for(int i=0;i<6;i++) eef.F[0].insert(i,i) = 1.0;
-    eef.F[1].resize(6,6);
     eef.dl = Eigen::VectorXd::Zero(11); eef.C.resize(11,6); eef.du = 1e10 * Eigen::VectorXd::Ones(11);
     eef.C.insert(0,2) = 1.0; eef.du[0] = 2000.0;
     eef.C.insert(1,0) = 1.0; eef.C.insert(1,2) = 0.2;

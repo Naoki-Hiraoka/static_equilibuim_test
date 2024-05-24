@@ -142,8 +142,8 @@ namespace wrench_distribution_existence {
         return false;
       }
       for(int j=0;j<args.eefs[i].F.size();j++){
-        if(args.eefs[i].F[j].rows() != 6 ||
-           args.eefs[i].F[j].cols() != args.eefs[i].dim){
+        if((args.eefs[i].F[j].rows() != 0 && args.eefs[i].F[j].rows() != 6) ||
+           (args.eefs[i].F[j].cols() != 0 && args.eefs[i].F[j].cols() != args.eefs[i].dim)){
           std::cerr << "[" <<__FUNCTION__ << "] dimension mismatch:" << std::endl;
           return false;
         }
@@ -171,24 +171,26 @@ namespace wrench_distribution_existence {
       Eigen::SparseMatrix<double,Eigen::ColMajor> G(6,F_cols);
       int col = 0;
       for(int i=0;i<args.eefs.size();i++){
-        Eigen::SparseMatrix<double,Eigen::RowMajor> GraspMatrix(6,6);
-        {
-          const Eigen::Matrix3d& R = args.eefs[i].pose.linear();
-          const Eigen::Matrix3d& p_x_R = wrench_distribution_existence::hat(args.eefs[i].pose.translation() - args.objects[o].c) * R;
-          /*
-            |R   0|
-            |pxR R|
-          */
-          for(int k=0;k<3;k++){
-            for(int j=0;j<3;j++) GraspMatrix.insert(j,k) = R(j,k);
-            for(int j=0;j<3;j++) GraspMatrix.insert(3+j,k) = p_x_R(j,k);
+        if(args.eefs[i].F[o].rows() != 0 && args.eefs[i].F[o].cols() != 0) {
+          Eigen::SparseMatrix<double,Eigen::RowMajor> GraspMatrix(6,6);
+          {
+            const Eigen::Matrix3d& R = args.eefs[i].pose.linear();
+            const Eigen::Matrix3d& p_x_R = wrench_distribution_existence::hat(args.eefs[i].pose.translation() - args.objects[o].c) * R;
+            /*
+              |R   0|
+              |pxR R|
+            */
+            for(int k=0;k<3;k++){
+              for(int j=0;j<3;j++) GraspMatrix.insert(j,k) = R(j,k);
+              for(int j=0;j<3;j++) GraspMatrix.insert(3+j,k) = p_x_R(j,k);
+            }
+            for(int k=0;k<3;k++){
+              for(int j=0;j<3;j++) GraspMatrix.insert(3+j,3+k) = R(j,k);
+            }
           }
-          for(int k=0;k<3;k++){
-            for(int j=0;j<3;j++) GraspMatrix.insert(3+j,3+k) = R(j,k);
-          }
+          Eigen::SparseMatrix<double,Eigen::ColMajor> Gi = GraspMatrix * args.eefs[i].F[o];
+          G.middleCols(col,args.eefs[i].dim) = Gi;
         }
-        Eigen::SparseMatrix<double,Eigen::ColMajor> Gi = GraspMatrix * args.eefs[i].F[o];
-        G.middleCols(col,args.eefs[i].dim) = Gi;
         col += args.eefs[i].dim;
       }
       A.middleRows<6>(6*o) = G;
