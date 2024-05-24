@@ -39,6 +39,22 @@ target_link_libraries(sample PUBLIC
   ${PROJECT_NAME}
   )
 
+add_executable(sample2
+  sample/sample2.cpp
+  )
+
+target_link_libraries(sample2 PUBLIC
+  ${PROJECT_NAME}
+  )
+
+add_executable(sample3
+  sample/sample3.cpp
+  )
+
+target_link_libraries(sample3 PUBLIC
+  ${PROJECT_NAME}
+  )
+
 #############
 ## Install ##
 #############
