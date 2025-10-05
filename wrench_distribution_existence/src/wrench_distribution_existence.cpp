@@ -46,7 +46,7 @@ namespace wrench_distribution_existence {
       Eigen::SparseMatrix<double,Eigen::ColMajor> G(6,F_cols);
       int col = 0;
       for(int i=0;i<args.eefs.size();i++){
-        Eigen::SparseMatrix<double,Eigen::RowMajor> GraspMatrix(6,6);
+        Eigen::SparseMatrix<double,Eigen::ColMajor> GraspMatrix(6,6);
         {
           const Eigen::Matrix3d& R = args.eefs[i].pose.linear();
           const Eigen::Matrix3d& p_x_R = wrench_distribution_existence::hat(args.eefs[i].pose.translation() - args.c) * R;
