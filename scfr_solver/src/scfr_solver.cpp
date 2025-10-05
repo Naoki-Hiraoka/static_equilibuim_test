@@ -104,7 +104,7 @@ namespace scfr_solver {
       l.resize(0);
       u.resize(0);
       vertices.clear();
-      return true;
+      return false;
     }
 
     Eigen::SparseMatrix<double,Eigen::RowMajor> A;
