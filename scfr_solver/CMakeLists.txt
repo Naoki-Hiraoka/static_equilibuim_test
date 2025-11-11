@@ -31,6 +31,18 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${catkin_INCLUDE_DIRS}
   )
 
+add_executable(sample
+  src/sample.cpp
+  )
+target_link_libraries(sample PUBLIC
+  ${PROJECT_NAME}
+  )
+target_include_directories(sample PUBLIC
+  include
+  ${catkin_INCLUDE_DIRS}
+  )
+
+
 #############
 ## Install ##
 #############

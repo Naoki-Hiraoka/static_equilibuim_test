@@ -5,6 +5,11 @@
 namespace static_equilibuim_test{
   // 3点a, b, cからなる三角形の面積
   double calcArea(const Eigen::Vector2d& a, const Eigen::Vector2d& b, const Eigen::Vector2d& c){
+    // 2点が一致している
+    if((a-b).norm() < 1e-6 ||
+       (b-c).norm() < 1e-6 ||
+       (c-a).norm() < 1e-6) return 0;
+
     Eigen::Vector2d v1 = b - a;
     Eigen::Vector2d v2 = c - a;
     return (v1[0]*v2[1]-v1[1]*v2[0])/2;
@@ -109,11 +114,10 @@ namespace static_equilibuim_test{
     solver.model().setDualTolerance(lpTolerance);
 
     Eigen::VectorXd solution;
-    std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y; //半時計回り. first: innervertex, second: outervector, third: この点と次の点で構成させるOuterとInnerの間の三角系の面積
+    std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y; //半時計回り. first: innervertex, second: outervector, third: この点と次の点で構成させるOuterとInnerの間の三角系の面積. outervectorは必ず半時計回りである. inververtexは重複あるいは微小に時計回りに回っている点が混ざっている可能性がある.
 
     // first 4 solve
     {
-      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> > Y_raw;
       std::vector<Eigen::Vector2d> outer(4);
       outer[0] = Eigen::Vector2d(1,0);
       outer[1] = Eigen::Vector2d(0,1);
@@ -126,22 +130,7 @@ namespace static_equilibuim_test{
           return false; // solution is infeasible
         }
         solver.getSolution(solution);
-        Y_raw.push_back(std::tuple<Eigen::Vector2d,Eigen::Vector2d,double>(solution.head<2>(),outer[i],0));
-      }
-
-      // 既存の点と重複していたら無視
-      for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y_raw.begin();it!=Y_raw.end();it++){
-        bool isClose = false;
-        for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it2=Y.begin();it2!=Y.end();it2++){
-          if((std::get<0>(*it) - std::get<0>(*it2)).norm() < 1e-6){
-            isClose = true;
-            break;
-          }
-        }
-        if(!isClose){
-          Y.push_back(*it);
-          if(debuglevel) std::cerr <<"vertex"<< std::get<0>(*it).transpose() << std::endl;
-        }
+        Y.push_back(std::tuple<Eigen::Vector2d,Eigen::Vector2d,double>(solution.head<2>(),outer[i],0));
       }
     }
 
@@ -180,8 +169,14 @@ namespace static_equilibuim_test{
       if (nextit == Y.end()) nextit = Y.begin();
 
       Eigen::Vector2d p1 = std::get<0>(*maxit);
+      Eigen::Vector2d n1 = std::get<1>(*maxit);
       Eigen::Vector2d p2 = std::get<0>(*nextit);
-      Eigen::Vector2d n = Eigen::Vector2d((p2-p1)[1],-(p2-p1)[0]).normalized();
+      Eigen::Vector2d n2 = std::get<1>(*nextit);
+
+      // 2点が一致している. これ以上の最適化は望めない
+      if((p1-p2).norm() < 1e-6) break;
+
+      Eigen::Vector2d n = (n1+n2).normalized(); // 元論文ではp1-p2のedgeに垂直な方向だが、vertexが近接していた場合の例外処理を書くのが大変なので変えた.
 
       // solve LP
       o.head<2>() = n;
@@ -193,18 +188,6 @@ namespace static_equilibuim_test{
       Eigen::Vector2d pX = solution.head<2>();
 
       if(debuglevel) std::cerr << "org"<< n.transpose() << " " << pX.transpose() << std::endl;
-
-      // 既存の点と重複していたら無視
-      bool isClose = false;
-      for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y.begin();it!=Y.end();it++){
-        if((std::get<0>(*it) - pX).norm() < 1e-6){
-          isClose = true;
-          area_Y_mid -= std::get<2>(*maxit);
-          std::get<2>(*maxit) = 0.0;
-          break;
-        }
-      }
-      if(isClose) continue;
 
       area_Y_inner += calcArea(p1,pX,p2);
       area_Y_mid -= std::get<2>(*maxit);
@@ -220,6 +203,37 @@ namespace static_equilibuim_test{
 
     if(revertIfFail && area_Y_inner / (area_Y_inner+area_Y_mid) < 1.0 - eps) return false;
 
+    // 位置が重複している点を削除
+    for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y.begin();it!=Y.end();){
+      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator nextit = std::next(it);
+      if(nextit==Y.end()) nextit = Y.begin();
+      if(nextit == it) break;
+      if( (std::get<0>(*it) - std::get<0>(*nextit)).norm() < 1e-6){
+        it = Y.erase(it);
+      }else{
+        it++;
+      }
+    }
+    // p1-p2の方向が重複している点を削除
+    for(std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator it=Y.begin();it!=Y.end();){
+      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator nextit = std::next(it);
+      if(nextit==Y.end()) nextit = Y.begin();
+      if(nextit == it) break;
+      std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator nextnextit = std::next(nextit);
+      if(nextnextit==Y.end()) nextnextit = Y.begin();
+      Eigen::Vector2d p1 = std::get<0>(*it);
+      Eigen::Vector2d p2 = std::get<0>(*nextit);
+      Eigen::Vector2d p3 = std::get<0>(*nextnextit);
+      Eigen::Vector2d n1 = Eigen::Vector2d((p2-p1)[1],-(p2-p1)[0]).normalized();
+      Eigen::Vector2d n2 = Eigen::Vector2d((p3-p2)[1],-(p3-p2)[0]).normalized();
+      if( (n1-n2).norm() < 1e-6){
+        Y.erase(nextit);
+      }else{
+        it++;
+      }
+    }
+
+
     //return value
     M_out = Eigen::SparseMatrix<double,Eigen::RowMajor>(Y.size(),2);
     u_out = Eigen::VectorXd(Y.size());
@@ -231,7 +245,7 @@ namespace static_equilibuim_test{
       if (nextit == Y.end()) nextit = Y.begin();
       Eigen::Vector2d p1 = std::get<0>(*it);
       Eigen::Vector2d p2 = std::get<0>(*nextit);
-      Eigen::Vector2d n = Eigen::Vector2d((p2-p1)[1],-(p2-p1)[0]).normalized(); // 点の重複を除く処理によって、std::get<1>(*it)のoutervectorは領域を示すものとしては不適切になっている
+      Eigen::Vector2d n = Eigen::Vector2d((p2-p1)[1],-(p2-p1)[0]).normalized();
 
       M_out.insert(i,0) = n[0];
       M_out.insert(i,1) = n[1];
