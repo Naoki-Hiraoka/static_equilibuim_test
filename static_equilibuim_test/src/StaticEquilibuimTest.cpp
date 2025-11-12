@@ -221,6 +221,7 @@ namespace static_equilibuim_test{
       if(nextit == it) break;
       std::list<std::tuple<Eigen::Vector2d,Eigen::Vector2d,double> >::iterator nextnextit = std::next(nextit);
       if(nextnextit==Y.end()) nextnextit = Y.begin();
+      if(nextnextit == it) break;
       Eigen::Vector2d p1 = std::get<0>(*it);
       Eigen::Vector2d p2 = std::get<0>(*nextit);
       Eigen::Vector2d p3 = std::get<0>(*nextnextit);
@@ -233,6 +234,8 @@ namespace static_equilibuim_test{
       }
     }
 
+    // 面積が無い
+    if(Y.size() < 3) return false;
 
     //return value
     M_out = Eigen::SparseMatrix<double,Eigen::RowMajor>(Y.size(),2);
